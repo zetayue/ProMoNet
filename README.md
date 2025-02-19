@@ -76,7 +76,7 @@ Compute ESM-2 embeddings for PocketMiner based on the fasta information provided
 
 **Training on scPDB, with validation and testing on PocketMiner:**
 
-    python train_general_bs.py --lr 1e-6 --batch_size 8 --epochs 40 --seed 705 --gpu 0 --wandb
+    python train_cryptic_bs.py --lr 1e-6 --batch_size 8 --epochs 40 --seed 705 --gpu 0 --wandb
 
 ### Binding Affinity prediction
 
