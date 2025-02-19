@@ -30,19 +30,23 @@ Download [scPDB dataset](http://bioinfo-pharma.u-strasbg.fr/scPDB/). Unzip folde
 
 Compute ESM-2 embeddings for scPDB based on the fasta information provided:
 
-    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/scPDB_unique_fasta.fasta ./esm/scPDB --repr_layers 33 --include per_tok contacts --truncation_seq_length 1600 --toks_per_batch 1600
+    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/scPDB_unique_fasta.fasta ./data/esm/scPDB --repr_layers 33 --include per_tok contacts --truncation_seq_length 1600 --toks_per_batch 1600
 
 **COACH420 and HOLO4K:**
 
 Download [protein fasta files](https://github.com/rdk/p2rank-datasets) and [ligand mol2 files](https://iiitaphyd-my.sharepoint.com/:f:/g/personal/rishal_aggarwal_alumni_iiit_ac_in/EoJSrvuiKPlAluOJLjTzfpcBT2fVRdq8Sr4BMmil0_tvHw?e=kXUss4). Unzip folders `p2rank-datasets` and `DeepPocket_data` under `./data`.
 
-Compute ESM-2 embeddings for scPDB based on the fasta information provided:
+Compute ESM-2 embeddings for COACH420 and HOLO4K based on the fasta information provided:
 
-    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/coach420_unique_fasta.fasta ./esm/coach420 --repr_layers 33 --include per_tok contacts --truncation_seq_length 1500 --toks_per_batch 1500
+    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/coach420_unique_fasta.fasta ./data/esm/coach420 --repr_layers 33 --include per_tok contacts --truncation_seq_length 1500 --toks_per_batch 1500
 
-    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/holo4k_unique_fasta.fasta ./esm/holo4k --repr_layers 33 --include per_tok contacts --truncation_seq_length 1500 --toks_per_batch 1500
+    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/holo4k_unique_fasta.fasta ./data/esm/holo4k --repr_layers 33 --include per_tok contacts --truncation_seq_length 1500 --toks_per_batch 1500
 
 **PocketMiner:**
+
+Compute ESM-2 embeddings for PocketMiner based on the fasta information provided:
+
+    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/pocketminer_all_fasta.fasta ./data/esm/pocketminer --repr_layers 33 --include per_tok contacts --truncation_seq_length 1500 --toks_per_batch 1500
 
 **PDBbind v2020:**
 
@@ -69,6 +73,10 @@ Compute ESM-2 embeddings for scPDB based on the fasta information provided:
     python inference_holo4k.py --lr 5e-5 --saved saved_model --seed 705 --gpu 0 --wandb
 
 ### Cryptic binding site prediction
+
+**Training on scPDB, with validation and testing on PocketMiner:**
+
+    python train_general_bs.py --lr 1e-6 --batch_size 8 --epochs 40 --seed 705 --gpu 0 --wandb
 
 ### Binding Affinity prediction
 
