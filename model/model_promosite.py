@@ -20,6 +20,7 @@ class ProMoSite(nn.Module):
         self.dim_interact_simple = 1024
         self.dim_pair = config.dim_pair
         self.n_trigonometry_module_stack = config.n_module
+        self.factor = config.factor
 
         self.layernorm = torch.nn.LayerNorm(self.dim_interact)
 
@@ -53,6 +54,15 @@ class ProMoSite(nn.Module):
             nn.Linear(self.dim_interact_simple, 1),
         )
 
+        self.protein_mlp = nn.Sequential(
+            LayerNorm(self.esm_feats),
+            nn.Linear(self.esm_feats, self.dim_interact_simple),
+            nn.ReLU(),
+            nn.Linear(self.dim_interact_simple, self.dim_interact_simple),
+            nn.ReLU(),
+            nn.Linear(self.dim_interact_simple, 1),
+        )
+
         self.rbf_protein_pair = BesselBasisLayer(16, 1, envelope_exponent=5)
         self.rbf_lig_pair = BesselBasisLayer(16, 15, envelope_exponent=5)
 
@@ -75,51 +85,56 @@ class ProMoSite(nn.Module):
 
         protein_pair = data_dict['protein_pair']
         lig_pair = data_dict['lig_pair']
+        lig_id = data_dict['lig_id']
 
         #================================== ESM-2 =====================================
         protein_emb_no_pair = self.esm_s_mlp(protein_x)           # _, dim_interact_simple
         protein_emb = self.protein_linear(protein_emb_no_pair)    # _, dim_interact
 
-        #================================== Uni-Mol =====================================
-        lig_emb_global = global_add_pool(lig_x, lig_batch)
+        y_protein = self.protein_mlp(protein_x).squeeze(-1)
 
-        lig_emb_global = self.unimol_global_mlp(lig_emb_global)
-        lig_emb = self.unimol_mlp(lig_x)
+        if lig_id != 'NULL':
+            #================================== Uni-Mol =====================================
+            lig_emb_global = global_add_pool(lig_x, lig_batch)
 
-        #================================== Interaction Module =====================================
-        protein_emb_batched, protein_emb_mask = to_dense_batch(protein_emb, protein_batch)
-        lig_emb_batched, lig_emb_mask = to_dense_batch(lig_emb, lig_batch)
+            lig_emb_global = self.unimol_global_mlp(lig_emb_global)
+            lig_emb = self.unimol_mlp(lig_x)
 
-        protein_emb_batched = self.layernorm(protein_emb_batched)
-        lig_emb_batched = self.layernorm(lig_emb_batched)
+            #================================== Interaction Module =====================================
+            protein_emb_batched, protein_emb_mask = to_dense_batch(protein_emb, protein_batch)
+            lig_emb_batched, lig_emb_mask = to_dense_batch(lig_emb, lig_batch)
 
-        z = torch.einsum("bik,bjk->bijk", protein_emb_batched, lig_emb_batched)
-        z_mask = torch.einsum("bi,bj->bij", protein_emb_mask, lig_emb_mask)
+            protein_emb_batched = self.layernorm(protein_emb_batched)
+            lig_emb_batched = self.layernorm(lig_emb_batched)
 
-        protein_pair = self.rbf_protein_pair(protein_pair.squeeze(-1))      # BS*L*L, 1, 16
-        lig_pair = self.rbf_lig_pair(lig_pair.squeeze(-1))         # BS*L*L, 1, 16
+            z = torch.einsum("bik,bjk->bijk", protein_emb_batched, lig_emb_batched)
+            z_mask = torch.einsum("bi,bj->bij", protein_emb_mask, lig_emb_mask)
 
-        protein_pair = self.protein_pair_mlp(protein_pair)    # BS, L, L, dim
-        lig_pair = self.lig_pair_mlp(lig_pair)                # BS, L, L, dim
+            protein_pair = self.rbf_protein_pair(protein_pair.squeeze(-1))      # BS*L*L, 1, 16
+            lig_pair = self.rbf_lig_pair(lig_pair.squeeze(-1))         # BS*L*L, 1, 16
 
-        for i_module in range(self.n_trigonometry_module_stack):
-            z = z + self.dropout(self.protein_to_compound_list[i_module](z, protein_pair, lig_pair, z_mask.unsqueeze(-1)))
-            z = z + self.dropout(self.triangle_self_attention_list[i_module](z, z_mask))
-            z = self.tranistion(z)
+            protein_pair = self.protein_pair_mlp(protein_pair)    # BS, L, L, dim
+            lig_pair = self.lig_pair_mlp(lig_pair)                # BS, L, L, dim
 
-        b = self.linear(z).squeeze(-1)
-        b = b * z_mask
-        b = torch.sum(b, dim=-1)
-        b = b / torch.sum(lig_emb_mask, dim=-1).unsqueeze(1)
-        y_pred = b[protein_emb_mask]
+            for i_module in range(self.n_trigonometry_module_stack):
+                z = z + self.dropout(self.protein_to_compound_list[i_module](z, protein_pair, lig_pair, z_mask.unsqueeze(-1)))
+                z = z + self.dropout(self.triangle_self_attention_list[i_module](z, z_mask))
+                z = self.tranistion(z)
 
-        x_lig_extend = lig_emb_global[protein_batch].view(-1, self.dim_interact_simple)
+            b = self.linear(z).squeeze(-1)
+            b = b * z_mask
+            b = torch.sum(b, dim=-1)
+            b = b / torch.sum(lig_emb_mask, dim=-1).unsqueeze(1)
+            y_pred = b[protein_emb_mask]
 
-        x_output = torch.cat([protein_emb_no_pair, x_lig_extend], dim=1)
-        x_output = self.concat_mlp(x_output).squeeze(-1)
+            x_lig_extend = lig_emb_global[protein_batch].view(-1, self.dim_interact_simple)
 
-        return y_pred * 0.5 + x_output * 0.5
+            x_output = torch.cat([protein_emb_no_pair, x_lig_extend], dim=1)
+            x_output = self.concat_mlp(x_output).squeeze(-1)
 
+            return y_pred * 0.5 + x_output * 0.5 + y_protein * self.factor
+        else:
+            return y_protein
 
 class TriangleProteinToCompound_v2(torch.nn.Module):
     def __init__(self, embedding_channels=256, c=128):

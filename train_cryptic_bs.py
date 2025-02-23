@@ -145,10 +145,11 @@ def main():
     parser.add_argument('--dim_pair', type=int, default=64, help='Size of hidden dimension for pair embs')
     parser.add_argument('--n_module', type=int, default=2, help='Number of Update layers')
     parser.add_argument('--patience', type=int, default=6, help='Number of epochs for early stopping')
-    parser.add_argument('--data_dir', type=str, default='data', help='Directory for data')
     parser.add_argument('--dropout', type=float, default=0.1, help='dropout')
     parser.add_argument('--y_cutoff', type=float, default=7.0, help='Cutoff for creating binary y')
     parser.add_argument('--max_length', type=float, default=1280, help='Max protein length')
+    parser.add_argument('--data_txt', type=str, default='scPDB_subset_pocketminer.txt', help='Txt file for scPDB')
+    parser.add_argument('--factor', type=float, default=0.1, help='Factor when ligand is available')
     args = parser.parse_args()
 
     if args.wandb:
@@ -164,8 +165,8 @@ def main():
     train_dataset = scPDB_Dataset(root = osp.join('.', 'data', 'processed_dataset'),
                                   name = 'scPDB_pocketminer',
                                   cif_dir = osp.join('.', 'data', 'Components-rel-alt.cif'),
-                                  txt_dir = osp.join('.', 'data', 'scPDB_full_preprocessed_rcsb_20240410_line_blast_30_pm_biolip.txt'),
-                                  dict_dir = osp.join('.', 'data', 'scPDB_full_preprocessed_rcsb_20240410_line_dict.txt'),
+                                  txt_dir = osp.join('.', 'data', args.data_txt),
+                                  dict_dir = osp.join('.', 'data', 'scPDB_unique_fasta_dict.txt'),
                                   esm_emb_dir = osp.join('.', 'data', 'esm', 'scPDB'),
                                   scPDB_dir = osp.join('.', 'data', 'scPDB'),
                                   max_length = args.max_length)
@@ -198,7 +199,7 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, follow_batch=['x_lig', 'pos_lig', 'dis_map_lig', 'LAS_mask', 'x_seq', 'x_pair'])
 
     # Setup model configurations
-    config = Config(dim_interact=args.dim_interact, dim_pair=args.dim_pair, n_module=args.n_module, dropout=args.dropout)
+    config = Config(dim_interact=args.dim_interact, dim_pair=args.dim_pair, n_module=args.n_module, dropout=args.dropout, factor=args.factor)
     model = ProMoSite(config).to(device)
 
     # Training and inference processes

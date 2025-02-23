@@ -151,7 +151,6 @@ def main():
     parser.add_argument('--dim_pair', type=int, default=64, help='Size of hidden dimension for pair embs')
     parser.add_argument('--n_module', type=int, default=2, help='Number of Update layers')
     parser.add_argument('--patience', type=int, default=4, help='Number of epochs for early stopping')
-    parser.add_argument('--data_dir', type=str, default='data', help='Directory for data')
     parser.add_argument('--dropout', type=float, default=0.25, help='dropout')
     parser.add_argument('--y_cutoff', type=float, default=7.0, help='Cutoff for creating binary y')
     parser.add_argument('--task', type=str, default="coach420", choices=["coach420", "holo4k"], help='Name of task')
@@ -172,7 +171,7 @@ def main():
         full_dataset = scPDB_Dataset(root = osp.join('.', 'data', 'processed_dataset'),
                                     name = 'scPDB_coach420',
                                     cif_dir = osp.join('.', 'data', 'Components-rel-alt.cif'),
-                                    txt_dir = osp.join('.', 'data', 'scPDB_subset_test_coach420.txt'),
+                                    txt_dir = osp.join('.', 'data', 'scPDB_subset_coach420.txt'),
                                     dict_dir = osp.join('.', 'data', 'scPDB_unique_fasta_dict.txt'),
                                     esm_emb_dir = osp.join('.', 'data', 'esm', 'scPDB'),
                                     scPDB_dir = osp.join('.', 'data', 'scPDB'),
@@ -181,7 +180,7 @@ def main():
         full_dataset = scPDB_Dataset(root = osp.join('.', 'data', 'processed_dataset'),
                                     name = 'scPDB_holo4k',
                                     cif_dir = osp.join('.', 'data', 'Components-rel-alt.cif'),
-                                    txt_dir = osp.join('.', 'data', 'scPDB_subset_test_holo4k.txt'),
+                                    txt_dir = osp.join('.', 'data', 'scPDB_subset_holo4k.txt'),
                                     dict_dir = osp.join('.', 'data', 'scPDB_unique_fasta_dict.txt'),
                                     esm_emb_dir = osp.join('.', 'data', 'esm', 'scPDB'),
                                     scPDB_dir = osp.join('.', 'data', 'scPDB'),

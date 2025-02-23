@@ -50,17 +50,25 @@ Compute ESM-2 embeddings for PocketMiner based on the fasta information provided
 
 **PDBbind v2020:**
 
+Compute ESM-2 embeddings for PDBbind v2020 based on the fasta information provided:
+
+    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/pdbbind2020/pdbbind2020_fasta.fasta ./data/esm/pdbbind2020 --repr_layers 33 --include per_tok contacts --truncation_seq_length 3000 --toks_per_batch 3000
+
 **Curated binding kinetics dataset:**
+
+Compute ESM-2 embeddings for binding kinetics dataset based on the fasta information provided:
+
+    python esm2_infer_fairscale_fsdp_cpu_offloading.py esm2_t33_650M_UR50D ./data/binding_kinetics/binding_kinetics_fasta.fasta ./data/esm/binding_kinetics --repr_layers 33 --include per_tok contacts --truncation_seq_length 700 --toks_per_batch 700
 
 ## How to Run
 
 ### General binding site prediction
 
-**Training on scPDB for testing on COACH420:**
+**Training on scPDB for inference on COACH420:**
 
     python train_general_bs.py --task 'coach420' --lr 5e-5 --batch_size 8 --epochs 10 --seed 705 --gpu 0 --wandb
 
-**Training on scPDB for testing on HOLO4K:**
+**Training on scPDB for inference on HOLO4K:**
 
     python train_general_bs.py --task 'holo4k' --lr 5e-5 --batch_size 8 --epochs 10 --seed 705 --gpu 0 --wandb
 
@@ -76,8 +84,28 @@ Compute ESM-2 embeddings for PocketMiner based on the fasta information provided
 
 **Training on scPDB, with validation and testing on PocketMiner:**
 
-    python train_cryptic_bs.py --lr 1e-6 --batch_size 8 --epochs 40 --seed 705 --gpu 0 --wandb
+    python train_cryptic_bs.py --lr 1e-6 --batch_size 8 --epochs 40 --seed 705 --gpu 0 --data_txt 'scPDB_subset_pocketminer.txt' --max_length 1280 --wandb
+
+### Pre-training on scPDB for downstream binding affinity and kinetics prediction
+
+    python train_cryptic_bs.py --lr 1e-6 --batch_size 8 --epochs 40 --seed 705 --gpu 0 --data_txt 'scPDB_full.txt' --max_length 1600 --wandb
 
 ### Binding Affinity prediction
 
+**Inference on PDBbind v2020 using pre-trained ProMoSite to obtain scores:**
+
+    python inference_affinity_score.py --lr 1e-6 --saved saved_model --seed 705 --gpu 0 --wandb
+
+**Training (fine-tuning), validation and testing on PDBbind v2020 using ProMoBind:**
+
+    python train_affinity.py --lr 5e-5 --batch_size 256 --epochs 300 --seed 705 --gpu 0 --wandb
+
 ### Binding Kinetics prediction
+
+**Inference on binding kinetics dataset using pre-trained ProMoSite to obtain scores:**
+
+    python inference_kinetics_score.py --lr 1e-6 --saved saved_model --seed 705 --gpu 0 --wandb
+
+**Training (fine-tuning), validation and testing on binding kinetics dataset using ProMoBind:**
+
+    python train_kinetics.py --lr 5e-6 --batch_size 4 --epochs 500 --seed 705 --gpu 0 --wandb
